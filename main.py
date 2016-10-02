@@ -1,4 +1,3 @@
-
 def hello():
     print ("Hello World. I'm an Accountant for the masses.")
     
@@ -30,9 +29,8 @@ class account():
     def getBalance(self):
         return self.balance
         
-    def getStatement(self,no_of_transactions):
-        
-        if no_of_transactions == -1 or (no_of_transactions > self.t_list) :
+    def getStatement(self,no_of_transactions=10):
+        if no_of_transactions == -1 or (no_of_transactions > self.t_index) :
             #show all transactions
             no_of_transactions = self.t_index
         
