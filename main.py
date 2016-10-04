@@ -46,6 +46,7 @@ class account():
             s+= "{} Amount: {}    Date: {}    Reason: {} \n" .format(t_index,amount,date,tag)
             
         return s
+
     
     def __str__(self):
         s = ''
