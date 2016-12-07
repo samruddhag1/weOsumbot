@@ -2,6 +2,15 @@
 """
 This file is for  functions that are directly tied to the bot commands.
 """
+from uuid import uuid4
+
+import re
+
+from telegram import InlineQueryResultArticle, ParseMode, \
+    InputTextMessageContent
+# -*- coding: utf-8 -*-
+"""
+"""
 import numpy as np
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -18,14 +27,74 @@ logger = logging.getLogger(__name__)
 
 CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
-PROCESSAMOUNT, CONFIRMAMOUNT, PROCESSREASON, CONFIRMREASON, GENERATETOKEN = range(5)
+PROCESSAMOUNT, CONFIRMAMOUNT, PROCESSREASON, CONFIRMREASON, GENERATETOKEN, INLINESELECT = range(6)
 
-reply_keyboard = [['7', '8', '9'],
-                  ['4', '5', '6'],
-                  ['1', '2', '3'],
-                  ['.', '0', '+'],
-                  ['*', '/', '-']]
-calc_markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+In_reply_keyboard = [[InlineKeyboardButton("7",callback_data='7'),
+                      InlineKeyboardButton("8",callback_data='8'),
+                      InlineKeyboardButton("9",callback_data='9'),
+                      InlineKeyboardButton("+",callback_data='+')],
+                     [InlineKeyboardButton("4",callback_data='4'),
+                      InlineKeyboardButton("5",callback_data='5'),
+                      InlineKeyboardButton("6",callback_data='6'),
+                      InlineKeyboardButton("-",callback_data='-'),],
+                     [InlineKeyboardButton("1",callback_data='1'),
+                      InlineKeyboardButton("2",callback_data='2'),
+                      InlineKeyboardButton("3",callback_data='3'),
+                      InlineKeyboardButton("*",callback_data='*')],
+                     [InlineKeyboardButton(".",callback_data='.'),
+                      InlineKeyboardButton("0",callback_data='0'),
+                      InlineKeyboardButton("(",callback_data='('), 
+                      InlineKeyboardButton(")",callback_data=')')],
+                     [InlineKeyboardButton("Del",callback_data='Del'),
+                      InlineKeyboardButton("=",callback_data='=')],
+                     [InlineKeyboardButton("CLEAR",callback_data='CLEAR'),
+                      InlineKeyboardButton("Done",callback_data='Done')]]
+
+calc_markup = InlineKeyboardMarkup(In_reply_keyboard, one_time_keyboard=False)
+
+def calci(bot, update):
+    query = update.callback_query
+    text = query.message.text
+    
+    if (query.data == '='):
+        
+        str_amt = text.replace('Please enter the transaction Amount:','')
+        amount = verify_amount(str_amt)
+        
+        bot.editMessageText(text="Please enter the transaction Amount: {}".format(amount),
+                            chat_id=query.message.chat_id,
+                            message_id=query.message.message_id ,reply_markup=calc_markup)    
+  
+    elif (query.data == 'Del'):
+        bot.editMessageText(text=text[:-1],
+                                chat_id=query.message.chat_id,
+                                message_id=query.message.message_id ,reply_markup=calc_markup)
+    elif(query.data == 'CLEAR'):
+        amount = ''
+        
+        bot.editMessageText(text="Please enter the transaction Amount: {}".format(amount),
+                            chat_id=query.message.chat_id,
+                            message_id=query.message.message_id ,reply_markup=calc_markup)
+        
+    elif (query.data == 'Done'):
+        str_amt = text.replace('Please enter the transaction Amount:','')
+        amount = verify_amount(str_amt)
+        if amount:
+            bot.editMessageText(text="Amount: {}".format(amount),
+                                chat_id=query.message.chat_id,
+                                message_id=query.message.message_id) 
+            return askReason(bot, update)
+        
+        else :
+            bot.editMessageText(text="Please enter the transaction Amount: INVALID",
+                                chat_id=query.message.chat_id,
+                                message_id=query.message.message_id,reply_markup=calc_markup)
+            
+        
+    else:  
+        bot.editMessageText(text=text+"{}".format(query.data),
+                            chat_id=query.message.chat_id,
+                            message_id=query.message.message_id ,reply_markup=calc_markup)
 
 
 def iOsum(bot , update):
@@ -41,16 +110,21 @@ def iOsum(bot , update):
     return askAmount(bot, update)
 
 
-def askAmount(bot , update):
+def askAmount(bot, update):
     """
     - Asks user for amount.
     - Changes state to PROCESSAMOUNT when done 
     """
     update.message.reply_text(
-        'How much exactly do you owe?',
+        'How much exactly do you owe?')
+    
+    update.message.reply_text(
+        'Please enter the transaction Amount: ',
         reply_markup=calc_markup)
+    
+    
         
-    return PROCESSAMOUNT
+    return PROCESSREASON
 
 
 def verify_amount(str_amt):
@@ -114,10 +188,18 @@ def askReason(bot, update):
     """
     - Asks for O reason
     """
-    update.message.reply_text(
-        'Any reason for this owe?'
-        'Type reason or press skip to skip',
-        reply_markup=ReplyKeyboardMarkup([['skip']], one_time_keyboard=True))
+    if (update.message is None):
+        query = update.callback_query
+        chat_id = chat_id=query.message.chat_id
+    else :
+        chat_id = update.message.chat_id
+        
+    bot.sendMessage(chat_id=chat_id, 
+                        text=
+                        'Any reason for this owe?'
+                        'Type reason or press skip to skip',
+                        reply_markup=ReplyKeyboardMarkup([['skip']], one_time_keyboard=True))
+    
     
     return PROCESSREASON
     
@@ -159,7 +241,9 @@ def token(bot, update):
     """
     t=np.random.random()*1000
     t=str(int(t))
-    transid=str(update.message.from_user.id)+t
+    transid=str(update.message.from_user.first_name[0])+'O'+t+str(update.message.from_user.id)
+    
+    logger.info("generated token:{}".format(transid) )
     return friend_selector(bot, update, transid)   
     
 def friend_selector(bot, update, transid):
@@ -170,8 +254,21 @@ def friend_selector(bot, update, transid):
     update.message.reply_text('You owe {} for {} reason, now choose a friend to confirm this transaction.', reply_markup=In_reply_markup)
     
     return ConversationHandler.END
-
+'''
+def inlineSelect(bot, update):
+    query = update.inline_query.query
+    results = list()
+    In_keyboard = [[InlineKeyboardButton("Confirm", switch_inline_query_current_chat='So kind of you, I fear I had almost forgot that')],
+                   [InlineKeyboardButton("Reject", switch_inline_query_current_chat='So kind of you but I do not remember any such trasaction.')]]
     
+    results.append(InlineQueryResultArticle(id=uuid4(),
+                                            title=query, 
+                                            reply_markup=InlineKeyboardMarkup(In_keyboard),
+                                            input_message_content=InputTextMessageContent('I owe you {} for {}, please confirm.'),
+                                            description='This {} will be maintained by @weOsumBot. I will pay you later.'.format(query)
+                                                                        ))
+    return ConversationHandler.END
+ '''       
 def cancel(bot, update):
     user = update.message.from_user
     logger.info("User {} canceled the conversation.".format(user))
@@ -211,6 +308,7 @@ def main():
     )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(CallbackQueryHandler(calci))
 
     # log all errors
     dp.add_error_handler(error)
