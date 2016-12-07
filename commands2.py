@@ -2,7 +2,7 @@
 """
 This file is for  functions that are directly tied to the bot commands.
 """
-
+import numpy as np
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
@@ -157,9 +157,20 @@ def confirmerReason(bot, update):
 def token(bot, update):
     """
     """
-    update.message.reply_text('Bye! We are Done.',
-                              reply_markup=ReplyKeyboardHide())    
+    t=np.random.random()*1000
+    t=str(int(t))
+    transid=str(update.message.from_user.id)+t
+    return friend_selector(bot, update, transid)   
+    
+def friend_selector(bot, update, transid):
+    In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=transid)]]
+
+    In_reply_markup = InlineKeyboardMarkup(In_keyboard)
+
+    update.message.reply_text('You owe {} for {} reason, now choose a friend to confirm this transaction.', reply_markup=In_reply_markup)
+    
     return ConversationHandler.END
+
     
 def cancel(bot, update):
     user = update.message.from_user
