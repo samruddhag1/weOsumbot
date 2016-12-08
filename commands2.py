@@ -4,6 +4,7 @@ This file is for  functions that are directly tied to the bot commands.
 """
 
 from numpy import random as nprandom
+
 from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
 
@@ -17,96 +18,34 @@ import logging
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
-
 logger = logging.getLogger(__name__)
+
+
+import dataset
+
+# connecting to a SQLite database and get a reference to the table 'transactions'
+db = dataset.connect('sqlite:///exportdata/transactions.db')
+table = db['usertransactions']
+
 
 CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
 PROCESSAMOUNT, CONFIRMAMOUNT, PROCESSREASON, CONFIRMREASON, GENERATETOKEN, INLINESELECT = range(6)
 
-In_reply_keyboard = [[InlineKeyboardButton("7",callback_data='7'),
-                      InlineKeyboardButton("8",callback_data='8'),
-                      InlineKeyboardButton("9",callback_data='9'),
-                      InlineKeyboardButton("+",callback_data='+')],
-                     [InlineKeyboardButton("4",callback_data='4'),
-                      InlineKeyboardButton("5",callback_data='5'),
-                      InlineKeyboardButton("6",callback_data='6'),
-                      InlineKeyboardButton("-",callback_data='-'),],
-                     [InlineKeyboardButton("1",callback_data='1'),
-                      InlineKeyboardButton("2",callback_data='2'),
-                      InlineKeyboardButton("3",callback_data='3'),
-                      InlineKeyboardButton("*",callback_data='*')],
-                     [InlineKeyboardButton(".",callback_data='.'),
-                      InlineKeyboardButton("0",callback_data='0'),
-                      InlineKeyboardButton("(",callback_data='('), 
-                      InlineKeyboardButton(")",callback_data=')')],
-                     [InlineKeyboardButton("Del",callback_data='Del'),
-                      InlineKeyboardButton("=",callback_data='=')],
-                     [InlineKeyboardButton("CLEAR",callback_data='CLEAR'),
-                      InlineKeyboardButton("Done",callback_data='Done')]]
-
-calc_markup = InlineKeyboardMarkup(In_reply_keyboard, one_time_keyboard=False)
-
-def calci(bot, update):
-    query = update.callback_query
-    text = query.message.text
-    user = query.message.from_user
-    
-    if (query.data == '='):
-        
-        str_amt = text.replace('Please enter the transaction Amount:','')
-        str_amt = str_amt.strip(' ')   #remove unnecessary spaces
-        amount = verify_amount(str_amt)
-        
-        bot.editMessageText(text="Please enter the transaction Amount: {}".format(amount),
-                            chat_id=query.message.chat_id,
-                            message_id=query.message.message_id ,reply_markup=calc_markup)    
-  
-    elif (query.data == 'Del'):
-        bot.editMessageText(text=text[:-1],
-                                chat_id=query.message.chat_id,
-                                message_id=query.message.message_id ,reply_markup=calc_markup)
-    elif(query.data == 'CLEAR'):
-        amount = ''
-        
-        bot.editMessageText(text="Please enter the transaction Amount: {}".format(amount),
-                            chat_id=query.message.chat_id,
-                            message_id=query.message.message_id ,reply_markup=calc_markup)
-        
-    elif (query.data == 'Done'):
-        str_amt = text.replace('Please enter the transaction Amount:','')
-        str_amt = str_amt.strip(' ')   #remove unnecessary spaces
-        amount = verify_amount(str_amt)
-        if amount:
-            bot.editMessageText(text="Amount: {}".format(amount),
-                                chat_id=query.message.chat_id,
-                                message_id=query.message.message_id) 
-            
-            logger.info("User {} Done with entering amount.".format(user))
-            return askReason(bot, update)
-        
-        else :
-            bot.editMessageText(text="Please enter the transaction Amount: INVALID",
-                                chat_id=query.message.chat_id,
-                                message_id=query.message.message_id,reply_markup=calc_markup)
-        
-        
-    else:  
-        bot.editMessageText(text=text+"{}".format(query.data),
-                            chat_id=query.message.chat_id,
-                            message_id=query.message.message_id ,reply_markup=calc_markup)
 
 
-def iOsum(bot , update):
+def iOsum(bot , update, user_data):
     """
     Osum converstion starts.
     """
     update.message.reply_text(
         'Hi! Looks like you owe somebody. '
-        'I will help you remember your dues'
+        'I will help you remember your dues.'
         'Send /cancel to stop talking to me.\n\n')
     
-    logger.info('/iOsum by user: {}'.format(update.message.from_user))    
+    user_data['amount'] = None
+    user_data['reason'] = None
+    logger.info('/iOsum by user: {}'.format(update.message.from_user))
     return askAmount(bot, update)
 
 
@@ -116,16 +55,11 @@ def askAmount(bot, update):
     - Changes state to PROCESSAMOUNT when done 
     """
     update.message.reply_text(
-        'How much exactly do you owe?')
+        'Please enter the transaction Amount: ')
     
-    update.message.reply_text(
-        'Please enter the transaction Amount: ',
-        reply_markup=calc_markup)
+    logger.info(' user: {} entering amount'.format(update.message.from_user))
     
-    logger.info(' user: {} starts playing with calci'.format(update.message.from_user))
-    
-    return PROCESSREASON
-
+    return PROCESSAMOUNT
 
 def verify_amount(str_amt):
     """
@@ -134,27 +68,26 @@ def verify_amount(str_amt):
     logger.info('Verifing: {}'.format(str_amt))
     try :
         amount = aeval(str_amt)     #using asteval's Interpreter as aeval
-        logger.info('Valid Amount: {}'.format(str_amt))
     except :
-        amount = False
+        amount = None
         logger.info('Invalid Amount: {}'.format(str_amt))
     
     return amount
 
 
-def process_amount(bot, update):
+def process_amount(bot, update, user_data):
     """
-    - Verifies if amount is valid.
-    - If not redo
-    - Adds it to userdata.
+    - Verifies if amount is valid. If not redo
+    - Adds amount to userdata.
     - Changes state to PROCESSREASON 
     """
     user = update.message.from_user
     amount = verify_amount(update.message.text)
-    print('Here!')
-    if amount:
+    if amount is not None:
+        logger.info('Valid Amount: {}'.format(update.message.text))
         logger.info("User:{} Amount: {}".format(user, amount))
         
+        user_data['amount'] = amount
         return confirmAmount(bot, update, amount)
     else:
         update.message.reply_text('Sorry! I could not understand that.')
@@ -173,16 +106,22 @@ def confirmAmount(bot, update, amount):
     
     return CONFIRMAMOUNT
     
-def confirmerAmount(bot, update):
+def confirmerAmount(bot, update, user_data):
     """
-    
+    Depending on user response:
+    passes control forward 
+    or loopback to askAmount.
     """
     response = update.message.text
+    user = update.message.from_user
     if response == 'No':
+        logger.info('user: {} chooses to redo askAmount'.format(user))
         return askAmount(bot, update)
         
     elif response == 'Yes':
+        logger.info('user: {} confirmed amount. Moving on..'.format(user))
         return askReason(bot, update)
+
 
 def askReason(bot, update):
     """
@@ -202,14 +141,16 @@ def askReason(bot, update):
     
     logger.info('user: {} is now reasoning'.format(update.message.from_user))
     return PROCESSREASON
-    
-def process_reason(bot, update):
+
+def process_reason(bot, update, user_data):
     """
-    
+    Recieves transaction notes. 
     """
     reason = update.message.text
     if reason == 'skip':
         reason = ''
+    
+    user_data['reason'] = reason
     return confirmReason(bot, update, reason)
 
 def confirmReason(bot, update, reason):
@@ -222,53 +163,49 @@ def confirmReason(bot, update, reason):
          
     return CONFIRMREASON
 
-
-def confirmerReason(bot, update):
+def confirmerReason(bot, update, user_data):
     """
-    
+    Depending on user response:
+    Saves reason to user_data and passes control forward 
+    or loopback to askReason.
     """
     response = update.message.text
     if response == 'No':
         return askReason(bot, update)
         
     elif response == 'Yes':
-        return token(bot, update)
-        
-        
-        
-def token(bot, update):
+        return token(bot, update, user_data)
+
+
+def token(bot, update, user_data):
     """
+    Generates a transaction tokenid
     """
-    t=nprandom.random()*1000
-    t=str(int(t))
-    transid=str(update.message.from_user.first_name[0])+'O'+t+str(update.message.from_user.id)
+    user = update.message.from_user
+    # connecting to the SQLite database and get a reference to the table 'transactions'
+    db = dataset.connect('sqlite:///exportdata/transactions.db')
+    table = db['usertransactions']
+
+    current_trans = dict(sender=user.id, amount=user_data['amount'], reason=user_data['reason'] )
+    tid = table.insert(current_trans)
     
-    logger.info("generated token:{}".format(transid) )
-    return friend_selector(bot, update, transid)   
+    token= 'O{:.3}{:0>6}'.format(user.first_name,tid)
+    table.update(dict(id=tid, token=token, reciever='None'), ['id'])
     
-def friend_selector(bot, update, transid):
-    In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=transid)]]
+    logger.info("generated token:{}".format(token) )
+    return friend_selector(bot, update, token)   
+
+
+def friend_selector(bot, update, token):
+    In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=token)]]
 
     In_reply_markup = InlineKeyboardMarkup(In_keyboard)
 
     update.message.reply_text('You owe {} for {} reason, now choose a friend to confirm this transaction.', reply_markup=In_reply_markup)
     
     return ConversationHandler.END
-'''
-def inlineSelect(bot, update):
-    query = update.inline_query.query
-    results = list()
-    In_keyboard = [[InlineKeyboardButton("Confirm", switch_inline_query_current_chat='So kind of you, I fear I had almost forgot that')],
-                   [InlineKeyboardButton("Reject", switch_inline_query_current_chat='So kind of you but I do not remember any such trasaction.')]]
-    
-    results.append(InlineQueryResultArticle(id=uuid4(),
-                                            title=query, 
-                                            reply_markup=InlineKeyboardMarkup(In_keyboard),
-                                            input_message_content=InputTextMessageContent('I owe you {} for {}, please confirm.'),
-                                            description='This {} will be maintained by @weOsumBot. I will pay you later.'.format(query)
-                                                                        ))
-    return ConversationHandler.END
- '''       
+
+
 def cancel(bot, update):
     user = update.message.from_user
     logger.info("User {} canceled the conversation.".format(user))
@@ -282,6 +219,7 @@ def error(bot, update, error):
 
 
 def main():
+    
     # Create the EventHandler and pass it your bot's token.
     updater = Updater("215450926:AAELiS1y9NIczfgy19KO48mnlMVrcf4xVCs")
 
@@ -290,25 +228,26 @@ def main():
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('iOsum', iOsum)],
+        entry_points=[CommandHandler('iOsum', iOsum, pass_user_data=True)],
 
         states={
-            PROCESSAMOUNT: [MessageHandler(Filters.text, process_amount)],
+            PROCESSAMOUNT: [MessageHandler(Filters.text, process_amount, pass_user_data=True)],
             
-            CONFIRMAMOUNT: [RegexHandler('^(Yes|No)$', confirmerAmount)],
+            CONFIRMAMOUNT: [RegexHandler('^(Yes|No)$', confirmerAmount, pass_user_data=True)],
             
-            PROCESSREASON: [MessageHandler(Filters.text, process_reason)],
+            PROCESSREASON: [MessageHandler(Filters.text, process_reason, pass_user_data=True)],
             
-            CONFIRMREASON: [RegexHandler('^(Yes|No)$', confirmerReason)],
+            CONFIRMREASON: [RegexHandler('^(Yes|No)$', confirmerReason, pass_user_data=True)],
             
-            GENERATETOKEN: [MessageHandler(Filters.text, token)]
+            GENERATETOKEN: [MessageHandler(Filters.text, token, pass_user_data=True)]
         },
 
         fallbacks=[CommandHandler('cancel', cancel)]
     )
 
     dp.add_handler(conv_handler)
-    dp.add_handler(CallbackQueryHandler(calci))
+    dp.add_handler(CommandHandler('cancel', cancel))
+    #dp.add_handler(CallbackQueryHandler(calci))
 
     # log all errors
     dp.add_error_handler(error)
@@ -321,6 +260,13 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
+    
+    #Export collected data
+    logger.info("Exiting. Saving collected data")
+    db = dataset.connect('sqlite:///exportdata/transactions.db')
+    table = db['usertransactions']
+    dataset.freeze(table, format='json', filename='transactions.json')
+    print('Bye')
 
 
 if __name__ == '__main__':

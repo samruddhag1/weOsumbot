@@ -10,7 +10,7 @@ import itertools
 # connecting to a SQLite database
 db = dataset.connect('sqlite:///exportdata/transactions.db')
 
-# get a reference to the table 'user'
+# get a reference to the table 'transactions'
 table = db['usertransactions']
 
 # Insert a new record.
@@ -54,4 +54,4 @@ largetrans = table.find(table.table.columns.amount >= 200)
 
 
 #Export
-dataset.freeze(largetrans, format='json', filename='/exportdata/largetrans.json')
+dataset.freeze(largetrans, format='json', filename='/largetrans.json')
