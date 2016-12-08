@@ -3,8 +3,9 @@
 This file is for  functions that are directly tied to the bot commands.
 """
 
-import numpy as np
-from ast import literal_eval as eval
+from numpy import random as nprandom
+from asteval import Interpreter
+aeval = Interpreter()       #Using this instead of eval
 
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -127,7 +128,7 @@ def verify_amount(str_amt):
     """
     logger.info('Verifing: {}'.format(str_amt))
     try :
-        amount = eval(str_amt)
+        amount = aeval(str_amt)     #using asteval's Interpreter as aeval
         logger.info('Valid Amount: {}'.format(str_amt))
     except :
         amount = False
@@ -233,7 +234,7 @@ def confirmerReason(bot, update):
 def token(bot, update):
     """
     """
-    t=np.random.random()*1000
+    t=nprandom.random()*1000
     t=str(int(t))
     transid=str(update.message.from_user.first_name[0])+'O'+t+str(update.message.from_user.id)
     
