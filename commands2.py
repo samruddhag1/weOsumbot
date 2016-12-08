@@ -50,10 +50,12 @@ calc_markup = InlineKeyboardMarkup(In_reply_keyboard, one_time_keyboard=False)
 def calci(bot, update):
     query = update.callback_query
     text = query.message.text
+    user = query.message.from_user
     
     if (query.data == '='):
         
         str_amt = text.replace('Please enter the transaction Amount:','')
+        str_amt = str_amt.strip(' ')   #remove unnecessary spaces
         amount = verify_amount(str_amt)
         
         bot.editMessageText(text="Please enter the transaction Amount: {}".format(amount),
@@ -73,18 +75,21 @@ def calci(bot, update):
         
     elif (query.data == 'Done'):
         str_amt = text.replace('Please enter the transaction Amount:','')
+        str_amt = str_amt.strip(' ')   #remove unnecessary spaces
         amount = verify_amount(str_amt)
         if amount:
             bot.editMessageText(text="Amount: {}".format(amount),
                                 chat_id=query.message.chat_id,
                                 message_id=query.message.message_id) 
+            
+            logger.info("User {} Done with entering amount.".format(user))
             return askReason(bot, update)
         
         else :
             bot.editMessageText(text="Please enter the transaction Amount: INVALID",
                                 chat_id=query.message.chat_id,
                                 message_id=query.message.message_id,reply_markup=calc_markup)
-            
+        
         
     else:  
         bot.editMessageText(text=text+"{}".format(query.data),
@@ -117,8 +122,8 @@ def askAmount(bot, update):
         'Please enter the transaction Amount: ',
         reply_markup=calc_markup)
     
+    logger.info(' user: {} starts playing with calci'.format(update.message.from_user))
     
-        
     return PROCESSREASON
 
 
@@ -195,7 +200,7 @@ def askReason(bot, update):
                         'Type reason or press skip to skip',
                         reply_markup=ReplyKeyboardMarkup([['skip']], one_time_keyboard=True))
     
-    
+    logger.info('user: {} is now reasoning'.format(update.message.from_user))
     return PROCESSREASON
     
 def process_reason(bot, update):
@@ -212,7 +217,7 @@ def confirmReason(bot, update, reason):
     -Asks user to confirm reason
     """
     update.message.reply_text(
-        'You owe because: {}\n Confirm?'.format(reason),
+        'You owe because: {!r}\n Confirm?'.format(reason),
          reply_markup=ReplyKeyboardMarkup([['Yes','No']], one_time_keyboard=True))
          
     return CONFIRMREASON
