@@ -2,16 +2,10 @@
 """
 This file is for  functions that are directly tied to the bot commands.
 """
-from uuid import uuid4
 
-import re
-
-from telegram import InlineQueryResultArticle, ParseMode, \
-    InputTextMessageContent
-# -*- coding: utf-8 -*-
-"""
-"""
 import numpy as np
+from ast import literal_eval as eval
+
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
