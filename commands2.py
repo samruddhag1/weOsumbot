@@ -5,12 +5,13 @@ This file is for  functions that are directly tied to the bot commands.
 
 from numpy import random as nprandom
 import queryhandlers        #custom queryhandlers file
-import database2        #custom database file
 
 from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
 
-from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
+import itertools
+
+from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler, CallbackQueryHandler)
@@ -230,18 +231,25 @@ def history(bot, update):
     #Merge the finds
     user_all=itertools.chain(user_sent,user_got)
     
-    database2.showlist(table, user_all)
+    update.message.reply_text(str_list(table, user_all),
+                            reply_markup=ReplyKeyboardRemove())
+
     
-#Printing out the table
-def showlist(table,sublist):
+#Printing out database subtable
+def str_list(table,sublist):
+    s=''
     for item in table.columns:
-        print (item,end='\t')   #Printing headers
-    print('\n')
+        s+= str(item)+'\t'   #Printing headers
+    s+='\n'
     
     for row in sublist:
         for item in table.columns:
-            print (row[item],end='\t')  #Printing values
-        print(end='\n')
+            s+=str(row[item]) + '\t'  #Printing values
+        s+='\n'
+
+    return s
+
+
 
     
     
@@ -285,6 +293,7 @@ def main():
     )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(CommandHandler('history', history))
     dp.add_handler(CommandHandler('cancel', cancel))
     #dp.add_handler(CallbackQueryHandler(calci))
 
