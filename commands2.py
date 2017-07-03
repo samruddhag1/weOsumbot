@@ -5,6 +5,7 @@ This file is for  functions that are directly tied to the bot commands.
 
 from numpy import random as nprandom
 import queryhandlers        #custom queryhandlers file
+import database2        #custom database file
 
 from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
@@ -16,6 +17,8 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackQueryHandler
 
 import logging
+
+                    
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -210,6 +213,38 @@ def friend_selector(bot, update, token, current_trans):
     return ConversationHandler.END
 
 
+def history(bot, update):
+    """
+    Returns history of transacion
+    """
+    user = update.message.from_user
+    # connecting to the SQLite database and get a reference to the table 'transactions'
+    db = dataset.connect('sqlite:///exportdata/transactions.db')
+    table = db['usertransactions']
+    #Finding
+
+    #All user0_owes
+    user_sent = table.find(sender=user.id)
+    #All user0_isowed
+    user_got = table.find(receiver=user.id)
+    #Merge the finds
+    user_all=itertools.chain(user_sent,user_got)
+    
+    database2.showlist(table, user_all)
+    
+#Printing out the table
+def showlist(table,sublist):
+    for item in table.columns:
+        print (item,end='\t')   #Printing headers
+    print('\n')
+    
+    for row in sublist:
+        for item in table.columns:
+            print (row[item],end='\t')  #Printing values
+        print(end='\n')
+
+    
+    
 def cancel(bot, update):
     user = update.message.from_user
     logger.info("User {} canceled the conversation.".format(user))
