@@ -4,6 +4,7 @@ This file is for  functions that are directly tied to the bot commands.
 """
 
 from numpy import random as nprandom
+import queryhandlers        #custom queryhandlers file
 
 from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
@@ -12,6 +13,7 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler, CallbackQueryHandler)
+from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackQueryHandler
 
 import logging
 
@@ -193,15 +195,17 @@ def token(bot, update, user_data):
     table.update(dict(id=tid, token=token, reciever='None'), ['id'])
     
     logger.info("generated token:{}".format(token) )
-    return friend_selector(bot, update, token)   
+
+    return friend_selector(bot, update, token, current_trans)   
 
 
-def friend_selector(bot, update, token):
+def friend_selector(bot, update, token, current_trans):
     In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=token)]]
 
     In_reply_markup = InlineKeyboardMarkup(In_keyboard)
 
-    update.message.reply_text('You owe {} for {} reason, now choose a friend to confirm this transaction.', reply_markup=In_reply_markup)
+    update.message.reply_text('You owe {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+        reply_markup=In_reply_markup)
     
     return ConversationHandler.END
 
@@ -221,7 +225,7 @@ def error(bot, update, error):
 def main():
     
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater("215450926:AAELiS1y9NIczfgy19KO48mnlMVrcf4xVCs")
+    updater = Updater("215450926:AAELiS1y9NIczfgy19KO48mnlMVrcf4xVCs")    #tokenHg
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
@@ -248,6 +252,10 @@ def main():
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('cancel', cancel))
     #dp.add_handler(CallbackQueryHandler(calci))
+
+    #QueryHandlers
+    dp.add_handler(InlineQueryHandler(queryhandlers.inlinequery))
+    dp.add_handler(CallbackQueryHandler(queryhandlers.trans_confirmer))
 
     # log all errors
     dp.add_error_handler(error)
