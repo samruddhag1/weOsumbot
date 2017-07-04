@@ -38,8 +38,13 @@ def showlist(table,sublist):
 
 #Finding
 
+def count_iterable(i):
+    return sum(1 for e in i)
+
 #All user0_owes
 user0_owes = table.find(ower='user0')
+print(count_iterable(user0_owes))
+
 #All user0_isowed
 user0_isowed = table.find(owee='user0')
 
@@ -54,4 +59,4 @@ largetrans = table.find(table.table.columns.amount >= 200)
 
 
 #Export
-dataset.freeze(largetrans, format='json', filename='/largetrans.json')
+dataset.freeze(largetrans, format='json', filename='largetrans.json')

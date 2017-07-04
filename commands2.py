@@ -186,17 +186,22 @@ def confirmerReason(bot, update, user_data):
 def token(bot, update, user_data):
     """
     Generates a transaction tokenid
+
+    status can have 3 states
+    =open
+    =confirmed
+    =rejected
     """
     user = update.message.from_user
     # connecting to the SQLite database and get a reference to the table 'transactions'
     db = dataset.connect('sqlite:///exportdata/transactions.db')
     table = db['usertransactions']
 
-    current_trans = dict(sender=user.id, amount=user_data['amount'], reason=user_data['reason'] )
+    current_trans = dict(sender=user.id, amount=user_data['amount'], reason=user_data['reason'], status='open' )
     tid = table.insert(current_trans)
     
     token= 'O{:.3}{:0>6}'.format(user.first_name,tid)
-    table.update(dict(id=tid, token=token, reciever='None'), ['id'])
+    table.update(dict(id=tid, token=token, receiver='Unknown'), ['id'])
     
     logger.info("generated token:{}".format(token) )
 
@@ -222,8 +227,10 @@ def history(bot, update):
     # connecting to the SQLite database and get a reference to the table 'transactions'
     db = dataset.connect('sqlite:///exportdata/transactions.db')
     table = db['usertransactions']
-    #Finding
 
+    logger.info("serving user={} a history lesson:{}".format(user) )
+    
+    #Finding
     #All user0_owes
     user_sent = table.find(sender=user.id)
     #All user0_isowed
@@ -248,7 +255,6 @@ def str_list(table,sublist):
         s+='\n'
 
     return s
-
 
 
     

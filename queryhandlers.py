@@ -6,12 +6,13 @@ This file is for  functions that are tied to the background handling of queries.
 from uuid import uuid4
 
 import dataset
-import datetime
+#import emoji
 
 from telegram import InlineQueryResultArticle, ParseMode, \
     InputTextMessageContent, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackQueryHandler
 import logging
+import datetime
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -34,7 +35,6 @@ def inlinequery(bot, update):
     
     db = dataset.connect('sqlite:///exportdata/transactions.db')
     table = db['usertransactions']
-    nowstring=datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     
     try:
         found_data = table.find_one(token=In_query)
@@ -69,52 +69,78 @@ def trans_confirmer(bot, update):
     """
     Responds to button presses.
 
+    Choice codes
+    0 : Receiver rejects
+    1 : Receiver accepts
+    2 : Unnecessary clicking
+
     """
+    nowstring=datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    #logger.info('got update {}'.format(update))
     query = update.callback_query
-    #logger.info('got callbackquery {} enter?{}'.format(query,query is '0'))
     user1 = query.from_user.id
-    logger.info('got user {}'.format(user1))
 
-    if query.data != '2':
-        token,choice=query.data[:-1],query.data[-1:]
-        logger.info('got {}, {}'.format(token, choice))
-        db = dataset.connect('sqlite:///exportdata/transactions.db')
-        table = db['usertransactions']    
-        found_data = table.find_one(token=token)
-        amount = found_data['amount']
-        reason = found_data['reason']
-        user0 = found_data['sender']
-        logger.info('got {}, {}, {}'.format(amount, reason, user0))
-        
-        if user1 == user0:
-            logger.info('{} is an asshole.'.format(user0))
-            pass
-        elif choice == '0':           #only if receiver confirms
-                    In_keyboard = [[InlineKeyboardButton("Confirm. Now I recall it.", callback_data=token+'1')],
-                                   [InlineKeyboardButton('No. I do not recall any such transaction.', callback_data='2')]]
-                        #bot.editMessageCaption(text="This transaction request with amount:{} for reason:{} is confirmed.".format(amount, reason),
-         #                       inline_message_id=update.callback_query.inline_message_id)
-                    bot.editMessageText(text="The transaction of {} for {} is rejected.".format(amount, reason),
-                                        inline_message_id=update.callback_query.inline_message_id) 
-                    bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
-                                               inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageCaption(inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageText(inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageReplyMarkup(inline_message_id=update.callback_query.inline_message_id)
-        elif choice == '1':
-               #only if receiver confirms
-                In_keyboard = [[InlineKeyboardButton("You are Osum!", callback_data='2')]]
-        #bot.editMessageCaption(text="This transaction request with amount:{} for reason:{} is confirmed.".format(amount, reason),
-         #                       inline_message_id=update.callback_query.inline_message_id)
-                bot.editMessageText(text="The transaction of {} for {} is confirmed.".format(amount, reason),
+    token,choice=query.data[:-1],query.data[-1:]
+    logger.info('got token={}, choice={}, from={}'.format(token, choice, user1))
+
+    #if unnecessary clicking
+    if choice == '2':        
+        logger.info("unnecessary clicking")
+        return 
+        #---------------------#Terminate function return none--------------------
+
+    #if not unnecessary clicking
+    db = dataset.connect('sqlite:///exportdata/transactions.db')
+    table = db['usertransactions']
+
+
+    found_data = table.find(token=token)
+    logger.info('found for token {} , {}'.format(token, found_data))
+    assert(count_iterable(found_data) == 1)
+
+    found_data = table.find_one(token=token)
+    amount = found_data['amount']
+    reason = found_data['reason']
+    user0  = found_data['sender']
+    logger.info('got data amount={}, reason={}, sender={}'.format(amount, reason, user0))
+
+
+    if user1 == user0:        #if sender itself tries to confirm
+        logger.info('{} is a fraud.'.format(user0))
+        return
+        #---------------------#Terminate function return none--------------------
+
+    
+    if found_data['status'] == 'open':
+        table.update(dict(token=found_data['token'], receiver=user1), ['token'])     #updates receiver info for transaction in the table
+        logger.info('got receiver (and updated in table) {}'.format(user1))
+    
+
+    
+    #Enforcing Receiver choice.
+    
+    if choice == '0':           #if receiver rejects
+                
+                In_keyboard = [[InlineKeyboardButton("Confirm. Now I recall it.", callback_data=token+'1')],
+                               [InlineKeyboardButton('No. I still do not recall any such transaction.', callback_data=token+'2')]]
+
+                bot.editMessageText(text="""Update:}\nThe transaction of {} for {} is disputed.\nYou can still confirm it after discussion.""".format(nowstring, amount, reason),
                                     inline_message_id=update.callback_query.inline_message_id) 
                 bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
                                            inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageCaption(inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageText(inline_message_id=update.callback_query.inline_message_id)
-        #bot.editMessageReplyMarkup(inline_message_id=update.callback_query.inline_message_id)
-    else:
-        logger.info("unnecessary clicking")
-        pass        
+
+    elif choice == '1':         #if receiver confirms
+
+            #In_keyboard = [[InlineKeyboardButton(emoji.emojize("weOsum🤖", use_aliases=True), callback_data='2', url="telegram.me/weOsumBot")]]
+            In_keyboard = [[InlineKeyboardButton("we Osum🤖", url="telegram.me/weOsumBot")]]
+
+            bot.editMessageText(text="Update:{}\nThe transaction of amount {} for '{}' is confirmed.".format(nowstring, amount, reason),
+                                inline_message_id=update.callback_query.inline_message_id) 
+            bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
+                                       inline_message_id=update.callback_query.inline_message_id)                                                        
+
+
+
+
+def count_iterable(i):
+    return sum(1 for e in i)
