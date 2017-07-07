@@ -232,13 +232,13 @@ def friend_selector(bot, update, token, current_trans):
     In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=token)]]
     In_reply_markup = InlineKeyboardMarkup(In_keyboard)
 
-    current_trans['minusamount'] = -current_trans['amount']
+    current_trans['absamount'] = abs(current_trans['amount'])
 
-    if user_data['who_owes'] == "iOsum":
-        update.message.reply_text('You owe {minusamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+    if current_trans['amount'] <= 0 :
+        update.message.reply_text('You owe {absamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
-    elif user_data['who_owes'] == "theyOsum":
+    elif current_trans['amount'] >0 :
         update.message.reply_text('Your friend owes {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
@@ -265,12 +265,12 @@ def history(bot, update):
     #Merge the finds
     user_all=itertools.chain(user_sent,user_got)
     
-    update.message.reply_text(str_list(table, user_all),
+    update.message.reply_text(subtable2str(table, user_all),
                             reply_markup=ReplyKeyboardRemove())
 
     
 #Printing out database subtable
-def str_list(table,sublist):
+def subtable2str(table,sublist):
     s=''
     for item in table.columns:
         s+= str(item)+'\t'   #Printing headers
