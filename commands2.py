@@ -128,7 +128,7 @@ def confirmAmount(bot, update, amount):
     - Asks user to confirm amount.
     """
     update.message.reply_text(
-        'Owe Amount {}\n Confirm?'.format(amount),
+        'Transaction Amount {}\n Confirm?'.format(amount),
          reply_markup=ReplyKeyboardMarkup([['Yes','No']], one_time_keyboard=True))
     
     return CONFIRMAMOUNT
@@ -185,7 +185,7 @@ def confirmReason(bot, update, reason):
     -Asks user to confirm reason
     """
     update.message.reply_text(
-        'Owe is for reason: {!r}\n Confirm?'.format(reason),
+        'Reason for the transaction : {!r}\n Confirm?'.format(reason),
          reply_markup=ReplyKeyboardMarkup([['Yes','No']], one_time_keyboard=True))
          
     return CONFIRMREASON
@@ -284,9 +284,9 @@ def lesson(sublist):
             row['status']="🤷‍♀"
         if row['amount']<0:
             row['amount']=abs(row['amount'])
-            s+="{}. {receiver}  ->  ₹{amount}  ->  {sender}, {status} \n".format(i, **row)
+            s+="{}. {receiver}  »—  ₹{amount}  -→  {sender}, {status} \n".format(i, **row)
         else:
-            s+="{}. {receiver}  ->  ₹{amount}  ->  {sender}, {status} \n".format(i, **row)
+            s+="{}. {sender}  »—  ₹{amount}  -→  {receiver}, {status} \n".format(i, **row)
         i+=1
     s+="Total Balance : {} \n".format(sum(toatal))
     return s
