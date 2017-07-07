@@ -10,6 +10,7 @@ from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
 
 import itertools
+import emoji
 
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -232,13 +233,13 @@ def friend_selector(bot, update, token, current_trans):
     In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=token)]]
     In_reply_markup = InlineKeyboardMarkup(In_keyboard)
 
-    current_trans['minusamount'] = -current_trans['amount']
+    current_trans['absamount'] = abs(current_trans['amount'])
 
-    if user_data['who_owes'] == "iOsum":
-        update.message.reply_text('You owe {minusamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+    if current_trans['amount'] <= 0 :
+        update.message.reply_text('You owe {absamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
-    elif user_data['who_owes'] == "theyOsum":
+    elif current_trans['amount'] >0 :
         update.message.reply_text('Your friend owes {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
@@ -255,7 +256,7 @@ def history(bot, update):
     db = dataset.connect('sqlite:///exportdata/transactions.db')
     table = db['usertransactions']
 
-    logger.info("serving user={} a history lesson:{}".format(user) )
+    logger.info("serving user= {} a history lesson".format(user) )
     
     #Finding
     #All user0_owes
@@ -265,12 +266,33 @@ def history(bot, update):
     #Merge the finds
     user_all=itertools.chain(user_sent,user_got)
     
-    update.message.reply_text(str_list(table, user_all),
+    update.message.reply_text(lesson(user_all),
                             reply_markup=ReplyKeyboardRemove())
 
-    
+
+def lesson(sublist):
+    s=''
+    i=1
+    toatal=[]
+    for row in sublist:
+        if row['status']=='confirmed':
+           row['status']= u"\u2713"
+           toatal.append(row['amount'])
+        elif row['status']=='disputed':
+            row['status']= u"\u2718"
+        else:
+            row['status']="🤷‍♀"
+        if row['amount']<0:
+            row['amount']=abs(row['amount'])
+            s+="{}. {receiver}  ->  ₹{amount}  ->  {sender}, {status} \n".format(i, **row)
+        else:
+            s+="{}. {receiver}  ->  ₹{amount}  ->  {sender}, {status} \n".format(i, **row)
+        i+=1
+    s+="Total Balance : {} \n".format(sum(toatal))
+    return s
+
 #Printing out database subtable
-def str_list(table,sublist):
+def subtable2str(table,sublist):
     s=''
     for item in table.columns:
         s+= str(item)+'\t'   #Printing headers
@@ -301,8 +323,8 @@ def error(bot, update, error):
 def main():
     
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater("215450926:AAELiS1y9NIczfgy19KO48mnlMVrcf4xVCs")    #tokenHg
-
+    #updater = Updater("215450926:AAELiS1y9NIczfgy19KO48mnlMVrcf4xVCs")    #tokenHg
+    updater = Updater("292385752:AAFCJrNmm_x47FFk_VzJqQFToDnZ7BdQKCU")    #tokenOsum
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
