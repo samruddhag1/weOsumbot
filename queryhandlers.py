@@ -129,20 +129,30 @@ def trans_confirmer(bot, update):
     
     if choice == '0':           #if receiver rejects
                 table.update(dict(token=found_data['token'], status='disputed' ), ['token'])
+
                 In_keyboard = [[InlineKeyboardButton("Confirm. Now I recall it.", callback_data=token+'1')],
                                [InlineKeyboardButton('No. I still do not recall any such transaction.', callback_data=token+'2')]]
 
-                bot.editMessageText(text="""Update:{}\nThe transaction of {} for {} is disputed.\nYou can still confirm it after discussion.""".format(nowstring, abs(amount), reason),
+                original_text= ("Hey I owe you {}, for {} \n Please confirm this transaction.".format(-amount, reason) if amount <= 0 else "Hey "
+                "you owe me {}, for {} \n Please confirm this transaction.".format( amount, reason) ) 
+
+                dispute_text = "\nUpdate:{}\nThis transaction is disputed by you.\nYou can still confirm it after discussion.".format(nowstring)
+                bot.editMessageText(text=original_text+dispute_text,
                                     inline_message_id=update.callback_query.inline_message_id) 
                 bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
                                            inline_message_id=update.callback_query.inline_message_id)
 
     elif choice == '1':         #if receiver confirms
             table.update(dict(token=found_data['token'], status='confirmed' ), ['token'])
+
             #In_keyboard = [[InlineKeyboardButton(emoji.emojize("weOsum🤖", use_aliases=True), callback_data='2', url="telegram.me/weOsumBot")]]
             In_keyboard = [[InlineKeyboardButton("we Osum🤖", url="telegram.me/weOsumBot")]]
 
-            bot.editMessageText(text="Update:{}\nThe transaction of amount {} for '{}' is confirmed.".format(nowstring, abs(amount), reason),
+            original_text= ("Hey I owe you {}, for {} \n Please confirm this transaction.".format(-amount, reason) if amount <= 0 else "Hey "
+                "you owe me {}, for {} \n Please confirm this transaction.".format( amount, reason) )
+            confirm_text= "\nUpdate:{}\nThe transaction is confirmed by you.".format(nowstring)
+
+            bot.editMessageText(text=original_text+confirm_text,
                                 inline_message_id=update.callback_query.inline_message_id) 
             bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
                                        inline_message_id=update.callback_query.inline_message_id)                                                        
