@@ -49,12 +49,20 @@ def inlinequery(bot, update):
                        [InlineKeyboardButton("No. I do not recall this.", callback_data=In_query+'0')]]
 
     
-             
-        results.append(InlineQueryResultArticle(id=uuid4(),
+        if amount <= 0 :
+            results.append(InlineQueryResultArticle(id=uuid4(),
                                             title="Click Here.\n Amount:{}, Reason:{}".format(amount,reason),
                                             reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
                                             input_message_content=InputTextMessageContent(
-                                                "{}\n Hey I owe you {}, for {} \n Please confirm this transaction.".format(nowstring, amount, reason) )))
+                                                "{}\n Hey I owe you {}, for {} \n Please confirm this transaction.".format(nowstring, -amount, reason) )))
+        
+        elif amount > 0:
+            results.append(InlineQueryResultArticle(id=uuid4(),
+                                            title="Click Here.\n Amount:{}, Reason:{}".format(amount,reason),
+                                            reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
+                                            input_message_content=InputTextMessageContent(
+                                                "{}\n Hey you owe me {}, for {} \n Please confirm this transaction.".format(nowstring, amount, reason) )))
+
         
     
     except:
@@ -134,7 +142,7 @@ def trans_confirmer(bot, update):
             #In_keyboard = [[InlineKeyboardButton(emoji.emojize("weOsum🤖", use_aliases=True), callback_data='2', url="telegram.me/weOsumBot")]]
             In_keyboard = [[InlineKeyboardButton("we Osum🤖", url="telegram.me/weOsumBot")]]
 
-            bot.editMessageText(text="Update:{}\nThe transaction of amount {} for '{}' is confirmed.".format(nowstring, amount, reason),
+            bot.editMessageText(text="Update:{}\nThe transaction of amount {} for '{}' is confirmed.".format(nowstring, abs(amount), reason),
                                 inline_message_id=update.callback_query.inline_message_id) 
             bot.editMessageReplyMarkup(reply_markup=InlineKeyboardMarkup(In_keyboard, one_time_keyboard=False),
                                        inline_message_id=update.callback_query.inline_message_id)                                                        

@@ -49,9 +49,26 @@ def iOsum(bot , update, user_data):
         'I will help you remember your dues.'
         'Send /cancel to stop talking to me.\n\n')
     
-    user_data['amount'] = None
-    user_data['reason'] = None
+    user_data['amount']   = None
+    user_data['reason']   = None
+    user_data['who_owes'] = "iOsum"
     logger.info('/iOsum by user: {}'.format(update.message.from_user))
+    return askAmount(bot, update)
+
+
+def theyOsum(bot , update, user_data):
+    """
+    Osum converstion starts.
+    """
+    update.message.reply_text(
+        'Hi! Looks like somebody owes you. '
+        'I will help you remember their dues.'
+        'Send /cancel to stop talking to me.\n\n')
+    
+    user_data['amount']   = None
+    user_data['reason']   = None
+    user_data['who_owes'] = "theyOsum"
+    logger.info('/theyOsum by user: {}'.format(update.message.from_user))
     return askAmount(bot, update)
 
 
@@ -91,8 +108,11 @@ def process_amount(bot, update, user_data):
     amount = verify_amount(update.message.text)
     if amount is not None:
         logger.info('Valid Amount: {}'.format(update.message.text))
-        logger.info("User:{} Amount: {}".format(user, amount))
-        
+		logger.info("User:{} Amount: {}".format(user, amount))
+
+		if user_data['who_owes'] == "iOsum":
+        	amount = -amount
+
         user_data['amount'] = amount
         return confirmAmount(bot, update, amount)
     else:
@@ -210,11 +230,18 @@ def token(bot, update, user_data):
 
 def friend_selector(bot, update, token, current_trans):
     In_keyboard = [[InlineKeyboardButton("Confirm with friend?", switch_inline_query=token)]]
+	In_reply_markup = InlineKeyboardMarkup(In_keyboard)
 
-    In_reply_markup = InlineKeyboardMarkup(In_keyboard)
+    current_trans['minusamount'] = -current_trans['amount']
 
-    update.message.reply_text('You owe {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
-        reply_markup=In_reply_markup)
+    if user_data['who_owes'] == "iOsum":
+    	update.message.reply_text('You owe {minusamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+        	reply_markup=In_reply_markup)
+
+    elif user_data['who_owes'] == "theyOsum":
+		update.message.reply_text('Your friend owes {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+        	reply_markup=In_reply_markup)
+
     
     return ConversationHandler.END
 
@@ -281,7 +308,10 @@ def main():
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('iOsum', iOsum, pass_user_data=True)],
+        entry_points=[CommandHandler('iOsum',    iOsum,    pass_user_data=True),
+       	              CommandHandler('theyOsum', theyOsum, pass_user_data=True),
+       	              CommandHandler('heOsum',   theyOsum, pass_user_data=True),
+       	              CommandHandler('sheOsum',  theyOsum, pass_user_data=True), ],
 
         states={
             PROCESSAMOUNT: [MessageHandler(Filters.text, process_amount, pass_user_data=True)],
