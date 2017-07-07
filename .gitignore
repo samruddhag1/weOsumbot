@@ -48,7 +48,9 @@ Temporary Items
 
 
 #Python cache files
+__pycache__/
 *.pyc
 
-#Database files etc
-exportdata/
+#Database folder, files etc
+exportdata/*.db
+transactions.json
