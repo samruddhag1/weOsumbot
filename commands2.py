@@ -10,7 +10,7 @@ from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
 
 import itertools
-import emoji
+#import emoji
 
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -39,6 +39,18 @@ CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
 PROCESSAMOUNT, CONFIRMAMOUNT, PROCESSREASON, CONFIRMREASON, GENERATETOKEN, INLINESELECT = range(6)
 
+
+
+def start(bot , update): 
+    s="Lets get you started!\n"
+    s+="You can use any of these commands\n"
+    s+="/iOsum   : You know you owe them. Use this to keep track. \n"
+    s+="/heOsum  : He owes you. Lets confirm this and keep track. \n"
+    s+="/sheOsum : She owe you. Lets confirm this and keep track. \n\n"
+
+    s+="/history : Does what is said. Opens your history book. Study! \n"
+
+    update.message.reply_text(s)
 
 
 def iOsum(bot , update, user_data):
@@ -271,6 +283,9 @@ def history(bot, update):
 
 
 def lesson(sublist):
+    """
+    Makes the history lesson string.
+    """
     s=''
     i=1
     toatal=[]
@@ -351,6 +366,7 @@ def main():
     )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('history', history))
     dp.add_handler(CommandHandler('cancel', cancel))
     #dp.add_handler(CallbackQueryHandler(calci))
