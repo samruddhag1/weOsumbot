@@ -265,30 +265,40 @@ def history(bot, update):
     user_got = table.find(receiver=user.id)
     #Merge the finds
     user_all=itertools.chain(user_sent,user_got)
+    user_name=user.first_name
     
-    update.message.reply_text(lesson(user_all),
+    update.message.reply_text(lesson(user_all, user),
                             reply_markup=ReplyKeyboardRemove())
 
 
-def lesson(sublist):
-    s=''
+def lesson(sublist, user):
+    s='🖨\n'
     i=1
-    toatal=[]
+    stotal=[]
+    rtotal=[]
     for row in sublist:
         if row['status']=='confirmed':
-           row['status']= u"\u2713"
-           toatal.append(row['amount'])
+            logging.info('row : {}'.format(row))
+            row['status']= u"\u2713"
+            if row['receiver']==str(user.id):
+                rtotal.append(row['amount'])
+                logging.info('ramount : {}'.format(row['amount']))     
+            else:
+                stotal.append(row['amount'])
+                logging.info('samount : {}'.format(row['amount'])) 
         elif row['status']=='disputed':
             row['status']= u"\u2718"
         else:
             row['status']="🤷‍♀"
         if row['amount']<0:
             row['amount']=abs(row['amount'])
-            s+="{}. {receiver}  »—  ₹{amount}  -→  {sender}, {status} \n".format(i, **row)
+            s+="{}. {receiver}  »—  ₹{amount}  →  {sender}, {status} \n".format(i, **row)
         else:
-            s+="{}. {sender}  »—  ₹{amount}  -→  {receiver}, {status} \n".format(i, **row)
+            s+="{}. {sender}  »—  ₹{amount}  →  {receiver}, {status} \n".format(i, **row)
         i+=1
-    s+="Total Balance : {} \n".format(sum(toatal))
+    s=s.replace(str(user.id), '      me        ')
+    logging.info('user : {}, stotal : {}, rtotal : {}'.format(user.first_name, stotal, rtotal))
+    s+= "Overall {} : ₹{} \n".format(u"\u2696", sum(stotal)-sum(rtotal))
     return s
 
 #Printing out database subtable
