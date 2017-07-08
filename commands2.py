@@ -10,7 +10,7 @@ from asteval import Interpreter
 aeval = Interpreter()       #Using this instead of eval
 
 import itertools
-import emoji
+#import emoji
 
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, ReplyKeyboardHide)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -39,6 +39,18 @@ CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
 PROCESSAMOUNT, CONFIRMAMOUNT, PROCESSREASON, CONFIRMREASON, GENERATETOKEN, INLINESELECT = range(6)
 
+
+
+def start(bot , update): 
+    s="Lets get you started!\n"
+    s+="You can use any of these commands\n"
+    s+="/iOsum   : You know you owe them. Use this to keep track. \n"
+    s+="/heOsum  : He owes you. Lets confirm this and keep track. \n"
+    s+="/sheOsum : She owe you. Lets confirm this and keep track. \n\n"
+
+    s+="/history : Does what is said. Opens your history book. Study! \n"
+
+    update.message.reply_text(s)
 
 
 def iOsum(bot , update, user_data):
@@ -128,7 +140,7 @@ def confirmAmount(bot, update, amount):
     - Asks user to confirm amount.
     """
     update.message.reply_text(
-        'Transaction Amount {}\n Confirm?'.format(amount),
+        'Transaction Amount {}\n Confirm?'.format(abs(amount)),
          reply_markup=ReplyKeyboardMarkup([['Yes','No']], one_time_keyboard=True))
     
     return CONFIRMAMOUNT
@@ -162,8 +174,8 @@ def askReason(bot, update):
         
     bot.sendMessage(chat_id=chat_id, 
                         text=
-                        'Any reason for this owe?'
-                        'Type reason or press skip to skip',
+                        'Any note for the transaction?'
+                        'Type and send or press skip to skip',
                         reply_markup=ReplyKeyboardMarkup([['skip']], one_time_keyboard=True))
     
     logger.info('user: {} is now reasoning'.format(update.message.from_user))
@@ -185,7 +197,7 @@ def confirmReason(bot, update, reason):
     -Asks user to confirm reason
     """
     update.message.reply_text(
-        'Reason for the transaction : {!r}\n Confirm?'.format(reason),
+        'Note for the transaction : {!r}\n Confirm?'.format(reason),
          reply_markup=ReplyKeyboardMarkup([['Yes','No']], one_time_keyboard=True))
          
     return CONFIRMREASON
@@ -218,7 +230,7 @@ def token(bot, update, user_data):
     db = dataset.connect('sqlite:///exportdata/transactions.db')
     table = db['usertransactions']
 
-    current_trans = dict(sender=user.id, amount=user_data['amount'], reason=user_data['reason'], status='open' )
+    current_trans = dict(sender=str(user.id), amount=user_data['amount'], reason=user_data['reason'], status='open' )
     tid = table.insert(current_trans)
     
     token= 'O{:.3}{:0>6}'.format(user.first_name,tid)
@@ -236,11 +248,11 @@ def friend_selector(bot, update, token, current_trans):
     current_trans['absamount'] = abs(current_trans['amount'])
 
     if current_trans['amount'] <= 0 :
-        update.message.reply_text('You owe {absamount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+        update.message.reply_text('You owe {absamount} for {reason}, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
     elif current_trans['amount'] >0 :
-        update.message.reply_text('Your friend owes {amount} for {reason} reason, now choose a friend to confirm this transaction.'.format(**current_trans), 
+        update.message.reply_text('Your friend owes {amount} for {reason}, now choose a friend to confirm this transaction.'.format(**current_trans), 
             reply_markup=In_reply_markup)
 
     
@@ -273,6 +285,9 @@ def history(bot, update):
 
 def lesson(sublist, user):
     s='🖨\n'
+    """
+    Makes the history lesson string.
+    """
     i=1
     stotal=[]
     rtotal=[]
@@ -301,7 +316,9 @@ def lesson(sublist, user):
     s+= "Overall {} : ₹{} \n".format(u"\u2696", sum(stotal)-sum(rtotal))
     return s
 
-#Printing out database subtable
+
+"""
+Printing out database subtable
 def subtable2str(table,sublist):
     s=''
     for item in table.columns:
@@ -314,10 +331,8 @@ def subtable2str(table,sublist):
         s+='\n'
 
     return s
+"""
 
-
-    
-    
 def cancel(bot, update):
     user = update.message.from_user
     logger.info("User {} canceled the conversation.".format(user))
@@ -361,6 +376,7 @@ def main():
     )
 
     dp.add_handler(conv_handler)
+    dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('history', history))
     dp.add_handler(CommandHandler('cancel', cancel))
     #dp.add_handler(CallbackQueryHandler(calci))
