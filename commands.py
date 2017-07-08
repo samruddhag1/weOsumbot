@@ -314,7 +314,8 @@ def cancel(bot, update):
     update.message.reply_text('Bye! I hope we can talk again some day.',
                               reply_markup=ReplyKeyboardHide())
 
-    return ConversationHandler.END
+    # ConversationHandler.END == -1
+    return -1
 
 def error(bot, update, error):
     logger.warn('Update "%s" caused error "%s"' % (update, error))
